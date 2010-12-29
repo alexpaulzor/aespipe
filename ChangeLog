@@ -1,0 +1,91 @@
+aespipe-v1.0b     May 14 2002
+    - First release to public
+
+aespipe-v2.0a     October 18 2002
+    - IV computation now wraps back to zero at 2^137 bytes instead of 2^41
+      bytes (2 TB). First 2 TB is fully compatible with v1.0 version.
+    - Added '-K file' and '-G dir' command line options to enable use of
+      GnuPG encrypted key files.
+
+aespipe-v2.1a     December 26 2002
+    - Added ./configure for better portability.
+    - Removed dependence of OpenSSL RIPE-MD160 library function by including
+      rmd160.[ch] files (copied from GnuPG package).
+    - Added mlockall() to prevent key leak to swap.
+    - Added '-C nnn' command line option that iterates encryption key nnn
+      thousand times through AES-256.
+
+aespipe-v2.1b     June 4 2003
+    - Added man page for aespipe.
+    - Minimum password length is now configurable at compile time.
+
+aespipe-v2.1c     September 8 2003
+    - bz2aespipe script rewritten to use unique random seed for each
+      encrypted archive. This version of bz2aespipe script is not compatible
+      with earlier headerless version.
+    - Man page now explains input file size padding (so that people
+      hopefully stop reporting this feature as a bug).
+
+aespipe-v2.2a     November 29 2003
+    - Added support for MD5 IV computation and multi-key operation that
+      reduce chances of identical ciphertexts and triggers change to all
+      cipher blocks in 512 byte CBC chain if any bit is changed in the 512
+      byte CBC chain. MD5 IV is only used in multi-key mode, read aespipe -K
+      man page for more details.
+    - When aespipe attempts to run gpg, and does not find gpg in obvious
+      locations, aespipe attempts to run gpg from same dir that aespipe was
+      run from.
+
+aespipe-v2.2b     February 11 2004
+    - Tiny speed optimization in MD5 IV computation.
+    - Automatic detection of weirdo gpg program location.
+
+aespipe-v2.2c     April 22 2004
+    - Added back aes.c code that avoids byte swaps on big endian boxes. This
+      change improves performance on all non-x86 computers.
+    - Security fix: restrict length of passphrase to max 4094 bytes when it
+      is read from file descriptor using "aespipe -p 3" option.
+    - Removed strip command from Makefile.in -- didn't work on solaris
+
+aespipe-v2.2d     July 7 2004
+    - Added optimized assembler implementations of AES and MD5 functions for
+      AMD64 and compatible processors.
+    - Pentium-2 optimized assembler implementations of AES and MD5 are
+      really i386 compatible, so now those assembler implementations are
+      enabled for all x86 processors.
+
+aespipe-v2.2e     August 21 2004
+    - Added multi-key compatibility to -p command line option handling.
+
+aespipe-v2.3a     November 26 2004
+    - Added support for loop-AES version 3 on-disk format.
+
+aespipe-v2.3b     March 18 2005
+    - Changed gpg pipe code to use '--no-options' instead of '--options
+      /dev/null'. Fix from Lars Packschies.
+    - Changed aespipe to warn about unknown key data format.
+
+aespipe-v2.3c     October 28 2006
+    - Changed aespipe program to output error message if gpg program does
+      not exist when gpg encrypted key file is used.
+
+aespipe-v2.3d     February 23 2007
+    - Added compatibility for two obsolete key setup methods, "-H unhashed1"
+      and "-H unhashed2". Patch from Jordan Ritter.
+    - Added "-P file" command line option.
+
+aespipe-v2.3e     October 28 2008
+    - Added -A option for gpg-agent usage. Patch from Richard Davies.
+    - Passphrase handling code cleanup.
+
+aespipe-v2.4b     June 3 2010
+    - Added DESTDIR make variable for "make install DESTDIR=/tmp/root", and
+      support for separate build directory (mkdir xx; cd xx; ../configure).
+      Patch from Alon Bar-Lev.
+    - Added faster (single thread) parallelized version of MD5 for amd64.
+    - Added support for VIA padlock hardware AES.
+    - Added support for Intel hardware AES.
+    - Added x86/amd64/padlock/intelaes auto-detections to ./configure
+      script, and these options to override its guesses: --disable-asm
+      --enable-asm=x86 --enable-asm=amd64 --enable-padlock --disable-padlock
+      --enable-intelaes --disable-intelaes
