@@ -53,6 +53,9 @@
 # define xcpu_to_le32(x) ((u_int32_t)(x))
 #endif
 
+#define CBC_MODE 0
+#define CTR_MODE 1
+
 char            *progName;
 int             ivCounter = 0;
 u_int32_t       devSect0 = 0;
@@ -73,6 +76,10 @@ unsigned int    waitSeconds = 0;
 int             multiKeyMode = 0; /* 0=single-key 64=multi-key-v2 65=multi-key-v3 */
 char            *multiKeyPass[66];
 u_int32_t       partialMD5[4];
+int		numThreads = 8;
+int		encMode = CBC_MODE;
+
+
 
 #define BUFBSIZE    (16*1024)
 unsigned char   *bufb;
@@ -808,6 +815,41 @@ static void (*generic_workFunc[4])(int) = {
     generic_multikey_encrypt
 };
 
+static void generic_ctr_singlekey_decrypt(int size)
+{
+    //TODO: implement
+    fprintf(stderr, "Counter mode requires Intel AES\n");
+    exit(1);
+}
+
+static void generic_ctr_singlekey_encrypt(int size)
+{
+    //TODO: implement
+    fprintf(stderr, "Counter mode requires Intel AES\n");
+    exit(1);
+}
+
+static void generic_ctr_multikey_decrypt(int size)
+{
+    //TODO: implement
+    fprintf(stderr, "Counter mode requires Intel AES\n");
+    exit(1);
+}
+
+static void generic_ctr_multikey_encrypt(int size)
+{
+    //TODO: implement
+    fprintf(stderr, "Counter mode requires Intel AES\n");
+    exit(1);
+}
+
+static void (*generic_ctr_workFunc[4])(int) = {
+    generic_ctr_singlekey_decrypt,
+    generic_ctr_singlekey_encrypt,
+    generic_ctr_multikey_decrypt,
+    generic_ctr_multikey_encrypt
+};
+
 #if defined(SUPPORT_PADLOCK) && (defined(X86_ASM) || defined(AMD64_ASM))
 static __inline__ void padlock_flush_key_context(void)
 {
@@ -1081,6 +1123,37 @@ static void (*intelaes_workFunc[4])(int) = {
     intelaes_multikey_decrypt,
     intelaes_multikey_encrypt
 };
+
+static void intelaes_ctr_singlekey_decrypt(int size)
+{
+
+}
+
+static void intelaes_ctr_singlekey_encrypt(int size)
+{
+
+}
+
+static void intelaes_ctr_multikey_decrypt(int size)
+{
+    //TODO: implement
+    fprintf(stderr, "Counter mode multikey encryption is not supported");
+    exit(1);
+}
+
+static void intelaes_ctr_multikey_encrypt(int size)
+{
+    //TODO: implement
+    fprintf(stderr, "Counter mode multikey encryption is not supported");
+    exit(1);
+}
+
+static void (*intelaes_ctr_workFunc[4])(int) = {
+    intelaes_ctr_singlekey_decrypt,
+    intelaes_ctr_singlekey_encrypt,
+    intelaes_ctr_multikey_decrypt,
+    intelaes_ctr_multikey_encrypt
+};
 #endif
 
 #if (defined(SUPPORT_PADLOCK) || defined(SUPPORT_INTELAES)) && defined(X86_ASM)
@@ -1178,6 +1251,8 @@ int main(int argc, char **argv)
                             "version 2.4b  Copyright (c) 2002-2010 Jari Ruusu, (c) 2001 Dr Brian Gladman\n"
                             "options:  -e aes128|aes192|aes256          =  set key length\n"
                             "          -H sha256|sha384|sha512|rmd160   =  set password hash function\n"
+			    "          -m cbc|ctr 			=  set encryption mode [default: cbc]\n"
+			    "          -t num     =  set number of threads to use (implies -m ctr)\n"
                             "          -d         =  decrypt\n"
                             "          -p num     =  read password from file descriptor num\n"
                             "          -P file    =  read password from file\n"
@@ -1203,6 +1278,17 @@ int main(int argc, char **argv)
                 case 'H':
                     if(!(*++(*argv) || (--argc && *++argv))) goto usage;
                     hfn = *argv;
+                    goto nextArg;
+		case 'm':
+                    if(!(*++(*argv) || (--argc && *++argv))) goto usage;
+		    if (strcmp(*argv, "cbc") == 0) encMode = CBC_MODE;
+		    else if (strcmp(*argv, "ctr") == 0) encMode = CTR_MODE;
+		    else goto usage;
+		    goto nextArg;
+		case 't':
+                    if(!(*++(*argv) || (--argc && *++argv))) goto usage;
+                    if(sscanf(*argv, "%d", &numThreads) != 1) goto usage;
+		    encMode = CTR_MODE;
                     goto nextArg;
                 case 'd':
                     encrypt = 0;

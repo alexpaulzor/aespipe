@@ -17,7 +17,7 @@ AC_PROG_MAKE_SET
 AC_CHECK_FUNCS([mlockall])
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([unistd.h fcntl.h sys/mman.h termios.h sys/ioctl.h strings.h])
+AC_CHECK_HEADERS([unistd.h fcntl.h sys/mman.h termios.h sys/ioctl.h strings.h pthread.h])
 AC_C_BIGENDIAN
 AC_C_CONST
 AC_TYPE_PID_T
