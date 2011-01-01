@@ -43,6 +43,10 @@
 #include "sha512.h"
 #include "rmd160.h"
 
+#if defined(SUPPORT_CTRMODE)
+# include "ctrmode.h"
+#endif
+
 #if !defined(AESPIPE_PASSWORD_MIN_LENGTH)
 # define  AESPIPE_PASSWORD_MIN_LENGTH   20
 #endif
@@ -102,6 +106,12 @@ void *specialMalloc(int size, int offs)
     return (void *)p;
 }
 
+/*
+ * Guessed meanings:
+ * int read_write_retry(int file_descriptor, char *buffer, int count, int write)
+ * performs a read or write operation to file_descriptor until it succeeeds,
+ * gives up after count (int cnt) failures.
+ */
 int rd_wr_retry(int fd, char *buf, int cnt, int w)
 {
     int x, y, z;
@@ -815,6 +825,8 @@ static void (*generic_workFunc[4])(int) = {
     generic_multikey_encrypt
 };
 
+#if defined(SUPPORT_CTRMODE)
+
 static void generic_ctr_singlekey_decrypt(int size)
 {
     //TODO: implement
@@ -849,6 +861,7 @@ static void (*generic_ctr_workFunc[4])(int) = {
     generic_ctr_multikey_decrypt,
     generic_ctr_multikey_encrypt
 };
+#endif //SUPPORT_CTRMODE
 
 #if defined(SUPPORT_PADLOCK) && (defined(X86_ASM) || defined(AMD64_ASM))
 static __inline__ void padlock_flush_key_context(void)
@@ -1124,8 +1137,11 @@ static void (*intelaes_workFunc[4])(int) = {
     intelaes_multikey_encrypt
 };
 
+#if defined(SUPPORT_CTRMODE)
+
 static void intelaes_ctr_singlekey_decrypt(int size)
 {
+    //data is in global char * buffb, which is an array of lenth size.
 
 }
 
@@ -1154,6 +1170,7 @@ static void (*intelaes_ctr_workFunc[4])(int) = {
     intelaes_ctr_multikey_decrypt,
     intelaes_ctr_multikey_encrypt
 };
+#endif	//SUPPORT_CTRMODE
 #endif
 
 #if (defined(SUPPORT_PADLOCK) || defined(SUPPORT_INTELAES)) && defined(X86_ASM)
@@ -1550,18 +1567,20 @@ int main(int argc, char **argv)
     }
 
     bMask = multiKeyMode ? 511 : 15;
+    if (encMode == CTR_MODE) ctr_setup(numThreads);
     ret = 0;
     while(1) {
         x = rd_wr_retry(0, (char *)(&bufb[0]), BUFBSIZE, 0);
         if(x < 1) break;
         while(x & bMask) bufb[x++] = 0;
         (*workFunc)(x);
-        if(rd_wr_retry(1, (char *)(&bufb[0]), x, 1) != x) {
+        if(encMode != CTR_MODE && rd_wr_retry(1, (char *)(&bufb[0]), x, 1) != x) {
             if(complainWriteErr) fprintf(stderr, "%s: write failed\n", progName);
             ret = 1;
             break;
         }
     }
+    if (encMode == CTR_MODE) ctr_finish();
 
     memset(ctx, 0, sizeof(aes_context));
     for(x = 0; x < 64; x++) {

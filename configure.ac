@@ -239,6 +239,32 @@ if test "$x_enable_intelaes" = yes ; then
 fi
 AC_MSG_RESULT([$x_enable_intelaes])
 
+dnl Check presence of yasm tool
+AC_ARG_VAR([YASM_PROG], [yasm])
+AC_CHECK_PROG([YASM_PROG],[yasm],[yasm],[yasm not found])
+AC_SUBST([YASM_PROG])
+
+dnl Handle --enable-ctrmode, --disable-ctrmode
+AC_MSG_CHECKING([whether to include support for multithreaded AES CTR mode])
+AC_ARG_ENABLE([ctrmode],
+	[AS_HELP_STRING([--enable-ctrmode],[include support for multithreaded AES CTR mode])],
+	[x_enable_ctrmode=$enableval,	[x_enable_ctrmode=autodetect])
+if test "$x_enable_intelaes" != yes -o "${YASM_PROG}" != "yasm" ; then
+	x_enable_ctrmode=no
+fi
+if test "$x_enable_ctrmode" = yes ; then
+	AC_DEFINE([SUPPORT_CTRMODE], [1])
+	OPTIMIZED_OBJS="${OPTIMIZED_OBJS} ctrmode.o"
+	if test "$x_enable_x86asm" = yes ; then
+		OPTIMIZED_OBJS="${OPTIMIZED_OBJS} aesni-x86.o"
+	elif test "$x_enable_amd64asm" = yes ; then	
+		OPTIMIZED_OBJS="${OPTIMIZED_OBJS} aesni-x64.o"
+	fi
+fi
+
+AC_MSG_RESULT([$x_enable_ctrmode])
+
+
 AC_SUBST([OPTIMIZED_OBJS])
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

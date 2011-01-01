@@ -12,6 +12,7 @@ LINK = @CC@ @LDFLAGS@
 STRIP = @STRIP_PROG@
 MD5SUM = @MD5SUM_PROG@
 MD5 = @MD5_PROG@
+YASM = @YASM_PROG@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 builddir = @builddir@
@@ -47,6 +48,23 @@ sha512.o: $(srcdir)/sha512.c $(srcdir)/sha512.h
 	$(CC) -o sha512.o -c $(srcdir)/sha512.c
 rmd160.o: $(srcdir)/rmd160.c $(srcdir)/rmd160.h
 	$(CC) -o rmd160.o -c $(srcdir)/rmd160.c
+
+#for ctr mode
+ctrmode.o: $(srcdir)/ctrmode.c $(srcdir)/ctrmode.h
+	$(CC) -o ctrmode.o -c $(srcdir)/ctrmode.c
+aesni-x86.o: iaes-x86.o do_rdtsc-x86.o $(srcdir)/iaesni.h $(srcdir)/iaes_asm_interface.h
+	$(CC) -o aesni-x86.o -c $(srcdir)/intel_aes.c
+iaes-x86.o: $(srcdir)/iaes-x86.s
+	$(YASM) -f elf32 -D__linux__ elf${sz} $(srcdir)/iaes-x86.s -o iaes-x86.o
+do_rdtsc-x86.o: $(srcdir)/do_rdtsc-x86.s
+	$(YASM) -f elf32 -D__linux__ elf${sz} $(srcdir)/do_rdtsc-x86.s -o do_rdtsc-x86.o
+aesni-x64.o: iaes-x64.o do_rdtsc-x64.o $(srcdir)/iaesni.h $(srcdir)/iaes_asm_interface.h
+	$(CC) -o aesni-x64.o -c $(srcdir)/intel_aes.c
+iaes-x64.o: $(srcdir)/iaes-x64.s
+	$(YASM) -f elf64 -D__linux__ elf${sz} $(srcdir)/iaes-x64.s -o iaes-x64.o
+do_rdtsc-x64.o: $(srcdir)/do_rdtsc-x64.s
+	$(YASM) -f elf64 -D__linux__ elf${sz} $(srcdir)/do_rdtsc-x64.s -o do_rdtsc-x64.o
+
 
 clean:
 	rm -f *.o aespipe test-file[12345] config.log config.status configure.lineno
