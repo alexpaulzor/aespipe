@@ -38,7 +38,7 @@ void perform_task(crypttask_t * task)
             break;
     }
 
-    task -> complete = true;
+    task -> complete = TRUE;
 }
 
 /*
@@ -115,7 +115,7 @@ void add_task(crypter_t * crypter, crypttask_t * task)
     pthread_mutex_unlock(&(crypter -> mutex));
 }
 
-extern void enqueue_data(char * input, int size)
+void enqueue_data(char * input, int size)
 {
         crypttask_t * task = malloc(sizeof(crypttask_t));
         task -> inputtext = malloc(size);
@@ -133,8 +133,8 @@ extern void enqueue_data(char * input, int size)
             }
         }
 
-        compute_sector_iv(task -> iv);(
-        task -> complete = false;
+        compute_sector_iv(task -> iv);
+        task -> complete = FALSE;
         task -> next_task = NULL;
         task -> next_block = NULL;
 
@@ -156,7 +156,7 @@ extern void enqueue_data(char * input, int size)
 
 void ctr_finish()
 {
-    has_more_input = false;
+    has_more_input = FALSE;
     // wait for queued jobs to finish
     pthread_join(io_worker -> thread, NULL);
 }
@@ -183,5 +183,5 @@ void ctr_setup(int num_threads, aes_context *context)
     fprintf(stderr, "Spawning io_worker thread.\n");
     pthread_create(&(io_worker -> thread), NULL, output_worker, (void *)(io_worker));
     
-    has_more_input = true;
+    has_more_input = TRUE;
 }

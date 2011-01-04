@@ -8,11 +8,12 @@ srcdir=.
 #  Redistribution of this file is permitted under the GNU Public License.
 #
 
-CC = gcc  -g -O2 -DPACKAGE_NAME=\"aespipe\" -DPACKAGE_TARNAME=\"aespipe\" -DPACKAGE_VERSION=\"2\" -DPACKAGE_STRING=\"aespipe\ 2\" -DPACKAGE_BUGREPORT=\"\" -DPACKAGE_URL=\"\" -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -D__EXTENSIONS__=1 -D_ALL_SOURCE=1 -D_GNU_SOURCE=1 -D_POSIX_PTHREAD_SEMANTICS=1 -D_TANDEM_SOURCE=1 -DHAVE_MLOCKALL=1 -DSTDC_HEADERS=1 -DHAVE_SYS_WAIT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_FCNTL_H=1 -DHAVE_SYS_MMAN_H=1 -DHAVE_TERMIOS_H=1 -DHAVE_SYS_IOCTL_H=1 -DHAVE_STRINGS_H=1 -DHAVE_U_INT32_T=1 -DHAVE_U_INT64_T=1 -DSIZEOF_UNSIGNED_INT=4 -DSIZEOF_UNSIGNED_LONG=8 -DSIZEOF_UNSIGNED_LONG_LONG=8 -DUSE_UNDERLINE=1
+CC = gcc  -std=c99 -DPACKAGE_NAME=\"aespipe\" -DPACKAGE_TARNAME=\"aespipe\" -DPACKAGE_VERSION=\"2\" -DPACKAGE_STRING=\"aespipe\ 2\" -DPACKAGE_BUGREPORT=\"\" -D_GNU_SOURCE=1 -DHAVE_MLOCKALL=1 -DSTDC_HEADERS=1 -DHAVE_SYS_WAIT_H=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_UNISTD_H=1 -DHAVE_FCNTL_H=1 -DHAVE_SYS_MMAN_H=1 -DHAVE_TERMIOS_H=1 -DHAVE_SYS_IOCTL_H=1 -DHAVE_STRINGS_H=1 -DHAVE_PTHREAD_H=1 -DHAVE_U_INT32_T=1 -DHAVE_U_INT64_T=1 -DSIZEOF_UNSIGNED_INT=4 -DSIZEOF_UNSIGNED_LONG=8 -DSIZEOF_UNSIGNED_LONG_LONG=8 -DUSE_UNDERLINE=1 -DSUPPORT_CTRMODE=1
 LINK = gcc 
 STRIP = strip
 MD5SUM = 
 MD5 = md5
+YASM = yasm
 prefix = /usr/local
 exec_prefix = ${prefix}
 builddir = .
@@ -22,8 +23,8 @@ SKIP_STRIP = true
 
 all x86 i586 amd64: aespipe
 
-aespipe: aespipe.o aes.o md5.o sha512.o rmd160.o
-	$(LINK) -o aespipe aespipe.o aes.o md5.o sha512.o rmd160.o 
+aespipe: aespipe.o aes.o md5.o ctrmode.o sha512.o rmd160.o
+	$(LINK) -o aespipe aespipe.o aes.o md5.o ctrmode.o sha512.o rmd160.o 
 aespipe.o: $(srcdir)/aespipe.c $(srcdir)/aes.h $(srcdir)/md5.h $(srcdir)/sha512.h $(srcdir)/rmd160.h
 	$(CC) -o aespipe.o -c $(srcdir)/aespipe.c
 aes.o: $(srcdir)/aes.c $(srcdir)/aes.h
@@ -48,6 +49,23 @@ sha512.o: $(srcdir)/sha512.c $(srcdir)/sha512.h
 	$(CC) -o sha512.o -c $(srcdir)/sha512.c
 rmd160.o: $(srcdir)/rmd160.c $(srcdir)/rmd160.h
 	$(CC) -o rmd160.o -c $(srcdir)/rmd160.c
+
+#for ctr mode
+ctrmode.o: $(srcdir)/ctrmode.c $(srcdir)/ctrmode.h
+	$(CC) -o ctrmode.o -c $(srcdir)/ctrmode.c
+aesni-x86.o: iaes-x86.o do_rdtsc-x86.o $(srcdir)/iaesni.h $(srcdir)/iaes_asm_interface.h
+	$(CC) -o aesni-x86.o -c $(srcdir)/intel_aes.c
+iaes-x86.o: $(srcdir)/iaes-x86.s
+	$(YASM) -f elf32 -D__linux__ elf${sz} $(srcdir)/iaes-x86.s -o iaes-x86.o
+do_rdtsc-x86.o: $(srcdir)/do_rdtsc-x86.s
+	$(YASM) -f elf32 -D__linux__ elf${sz} $(srcdir)/do_rdtsc-x86.s -o do_rdtsc-x86.o
+aesni-x64.o: iaes-x64.o do_rdtsc-x64.o $(srcdir)/iaesni.h $(srcdir)/iaes_asm_interface.h
+	$(CC) -o aesni-x64.o -c $(srcdir)/intel_aes.c
+iaes-x64.o: $(srcdir)/iaes-x64.s
+	$(YASM) -f elf64 -D__linux__ elf${sz} $(srcdir)/iaes-x64.s -o iaes-x64.o
+do_rdtsc-x64.o: $(srcdir)/do_rdtsc-x64.s
+	$(YASM) -f elf64 -D__linux__ elf${sz} $(srcdir)/do_rdtsc-x64.s -o do_rdtsc-x64.o
+
 
 clean:
 	rm -f *.o aespipe test-file[12345] config.log config.status configure.lineno

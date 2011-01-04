@@ -1567,7 +1567,9 @@ int main(int argc, char **argv)
     }
 
     bMask = multiKeyMode ? 511 : 15;
+#ifdef SUPPORT_CTRMODE
     if (encMode == CTR_MODE) ctr_setup(numThreads);
+#endif
     ret = 0;
     while(1) {
         x = rd_wr_retry(0, (char *)(&bufb[0]), BUFBSIZE, 0);
@@ -1580,7 +1582,9 @@ int main(int argc, char **argv)
             break;
         }
     }
+#ifdef SUPPORT_CTRMODE
     if (encMode == CTR_MODE) ctr_finish();
+#endif
 
     memset(ctx, 0, sizeof(aes_context));
     for(x = 0; x < 64; x++) {

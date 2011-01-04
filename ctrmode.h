@@ -26,6 +26,12 @@
 
 #define POLL_INTERVAL 100
 #define BLOCKSIZE 16        //given in intel AES library
+#ifndef TRUE
+# define TRUE 1
+#endif
+#ifndef FALSE
+# define FALSE 0
+#endif
 
 typedef struct crypttask
 {
@@ -34,7 +40,7 @@ typedef struct crypttask
     UCHAR * outputtext;
     int blockid;
     UCHAR iv[BLOCKSIZE];
-    bool complete;
+    int complete;
     struct crypttask * next_task;       //next task for worker thread
     struct crypttask * next_block;      //next block sequentially
 } crypttask_t;
@@ -48,7 +54,7 @@ typedef struct crypter
 } crypter_t;
 
 int numthreads = 0;
-int has_more_input = true;
+int has_more_input = 1;
 crypter_t * crypters;
 crypter_t * io_worker;
 

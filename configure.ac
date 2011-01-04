@@ -248,9 +248,10 @@ dnl Handle --enable-ctrmode, --disable-ctrmode
 AC_MSG_CHECKING([whether to include support for multithreaded AES CTR mode])
 AC_ARG_ENABLE([ctrmode],
 	[AS_HELP_STRING([--enable-ctrmode],[include support for multithreaded AES CTR mode])],
-	[x_enable_ctrmode=$enableval,	[x_enable_ctrmode=autodetect])
+	[x_enable_ctrmode=$enableval],	[x_enable_ctrmode=autodetect])
 if test "$x_enable_intelaes" != yes -o "${YASM_PROG}" != "yasm" ; then
-	x_enable_ctrmode=no
+	x_enable_ctrmode=yes
+dnl FIXME: x_enable_ctrmode=no
 fi
 if test "$x_enable_ctrmode" = yes ; then
 	AC_DEFINE([SUPPORT_CTRMODE], [1])
