@@ -25,15 +25,19 @@ void perform_task(crypttask_t * task)
     switch (keysize)
     {
         case 16:
+        case 128:
             intel_AES_encdec128_CTR(task -> inputtext, task -> outputtext, key, task -> blocks, task -> iv);
             break;
         case 24:
+        case 192:
             intel_AES_encdec192_CTR(task -> inputtext, task -> outputtext, key, task -> blocks, task -> iv);
             break;
         case 32:
+        case 256:
             intel_AES_encdec256_CTR(task -> inputtext, task -> outputtext, key, task -> blocks, task -> iv);
             break;
         default:
+            fprintf(stderr, "Invalid keysize: %d\n", keysize);
             break;
     }
 
@@ -128,6 +132,7 @@ void add_task(crypter_t * crypter, crypttask_t * task)
 
 void enqueue_data(UCHAR * input, int size)
 {
+    //TODO: use compute_sector_iv in aespipe.c to compute the iv.
     crypttask_t * task = malloc(sizeof(crypttask_t));
     task -> inputtext = malloc(size);
     memcpy(task -> inputtext, input, size);

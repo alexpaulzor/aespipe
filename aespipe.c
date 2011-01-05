@@ -1548,6 +1548,13 @@ int main(int argc, char **argv)
 #endif
 #endif
     }
+#if defined(SUPPORT_CTRMODE)
+    if (encMode == CTR_MODE)
+    {
+	workFunc = intelaes_ctr_workFunc[x];
+	hardware = "Intel hardware AES CTR mode";
+    }
+#endif
     if(verbose) {
         char *mode;
         switch(multiKeyMode) {
@@ -1567,7 +1574,7 @@ int main(int argc, char **argv)
 
     bMask = multiKeyMode ? 511 : 15;
 #if defined(SUPPORT_CTRMODE)
-    if (encMode == CTR_MODE) ctr_setup(numThreads, ctx -> aes_e_key, ctx -> aes_Nkey, passSeedString);
+    if (encMode == CTR_MODE) ctr_setup(numThreads, ctx -> aes_e_key, sizeof(ctx -> aes_e_key), passSeedString);
 #endif
     ret = 0;
     while(1) {
