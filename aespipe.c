@@ -1141,13 +1141,12 @@ static void (*intelaes_workFunc[4])(int) = {
 
 static void intelaes_ctr_singlekey_decrypt(int size)
 {
-    //data is in global char * buffb, which is an array of lenth size.
-
+    enqueue_data(bufb, size);
 }
 
 static void intelaes_ctr_singlekey_encrypt(int size)
 {
-
+    enqueue_data(bufb, size);
 }
 
 static void intelaes_ctr_multikey_decrypt(int size)
@@ -1567,8 +1566,8 @@ int main(int argc, char **argv)
     }
 
     bMask = multiKeyMode ? 511 : 15;
-#ifdef SUPPORT_CTRMODE
-    if (encMode == CTR_MODE) ctr_setup(numThreads);
+#if defined(SUPPORT_CTRMODE)
+    if (encMode == CTR_MODE) ctr_setup(numThreads, ctx -> aes_e_key, ctx -> aes_Nkey, passSeedString);
 #endif
     ret = 0;
     while(1) {
@@ -1582,7 +1581,7 @@ int main(int argc, char **argv)
             break;
         }
     }
-#ifdef SUPPORT_CTRMODE
+#if defined(SUPPORT_CTRMODE)
     if (encMode == CTR_MODE) ctr_finish();
 #endif
 

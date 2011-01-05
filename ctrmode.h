@@ -38,7 +38,6 @@ typedef struct crypttask
     size_t blocks;
     UCHAR * inputtext;
     UCHAR * outputtext;
-    int blockid;
     UCHAR iv[BLOCKSIZE];
     int complete;
     struct crypttask * next_task;       //next task for worker thread
@@ -57,5 +56,14 @@ int numthreads = 0;
 int has_more_input = 1;
 crypter_t * crypters;
 crypter_t * io_worker;
+UCHAR * nonce;
+UCHAR * key;
+int keysize;
+unsigned long next_blockid_lsb;
+unsigned long next_blockid_msb;
+
+extern void ctr_setup(int, void *, int, char *);
+extern void ctr_finish();
+extern void enqueue_data(UCHAR *, int);
 
 #endif  //CTRMODE_H

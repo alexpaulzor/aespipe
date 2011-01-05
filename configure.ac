@@ -11,7 +11,7 @@ AC_INIT([aespipe], [2])
 AC_CONFIG_SRCDIR([aespipe.c])
 AC_GNU_SOURCE
 AC_SYS_LARGEFILE
-AC_PROG_CC
+AC_PROG_CC_C99
 AC_PROG_GREP
 AC_PROG_MAKE_SET
 AC_CHECK_FUNCS([mlockall])
@@ -250,8 +250,7 @@ AC_ARG_ENABLE([ctrmode],
 	[AS_HELP_STRING([--enable-ctrmode],[include support for multithreaded AES CTR mode])],
 	[x_enable_ctrmode=$enableval],	[x_enable_ctrmode=autodetect])
 if test "$x_enable_intelaes" != yes -o "${YASM_PROG}" != "yasm" ; then
-	x_enable_ctrmode=yes
-dnl FIXME: x_enable_ctrmode=no
+	x_enable_ctrmode=no
 fi
 if test "$x_enable_ctrmode" = yes ; then
 	AC_DEFINE([SUPPORT_CTRMODE], [1])
