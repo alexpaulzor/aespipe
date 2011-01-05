@@ -44,7 +44,7 @@
 #include "rmd160.h"
 
 #if defined(SUPPORT_CTRMODE)
-# include "ctrmode.h"
+# include "ctrmode_ext.h"
 #endif
 
 #if !defined(AESPIPE_PASSWORD_MIN_LENGTH)

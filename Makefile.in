@@ -50,20 +50,20 @@ rmd160.o: $(srcdir)/rmd160.c $(srcdir)/rmd160.h
 	$(CC) -o rmd160.o -c $(srcdir)/rmd160.c
 
 #for ctr mode
-ctrmode.o: $(srcdir)/ctrmode.c $(srcdir)/ctrmode.h
+ctrmode.o: $(srcdir)/ctrmode.c $(srcdir)/ctrmode.h $(srcdir)/ctrmode_ext.h
 	$(CC) -o ctrmode.o -c $(srcdir)/ctrmode.c
-aesni-x86.o: iaes-x86.o do_rdtsc-x86.o $(srcdir)/iaesni.h $(srcdir)/iaes_asm_interface.h
+aesni-x86.o: iaes-x86.o do_rdtsc-x86.o $(srcdir)/iaesni.h $(srcdir)/iaes_asm_interface.h $(srcdir)/intel_aes.c
 	$(CC) -o aesni-x86.o -c $(srcdir)/intel_aes.c
 iaes-x86.o: $(srcdir)/iaes-x86.s
-	$(YASM) -f elf32 -D__linux__ elf${sz} $(srcdir)/iaes-x86.s -o iaes-x86.o
+	$(YASM) -f elf32 -D__linux__ $(srcdir)/iaes-x86.s -o iaes-x86.o
 do_rdtsc-x86.o: $(srcdir)/do_rdtsc-x86.s
-	$(YASM) -f elf32 -D__linux__ elf${sz} $(srcdir)/do_rdtsc-x86.s -o do_rdtsc-x86.o
-aesni-x64.o: iaes-x64.o do_rdtsc-x64.o $(srcdir)/iaesni.h $(srcdir)/iaes_asm_interface.h
+	$(YASM) -f elf32 -D__linux__ $(srcdir)/do_rdtsc-x86.s -o do_rdtsc-x86.o
+aesni-x64.o: iaes-x64.o do_rdtsc-x64.o $(srcdir)/iaesni.h $(srcdir)/iaes_asm_interface.h $(srcdir)/intel_aes.c
 	$(CC) -o aesni-x64.o -c $(srcdir)/intel_aes.c
 iaes-x64.o: $(srcdir)/iaes-x64.s
-	$(YASM) -f elf64 -D__linux__ elf${sz} $(srcdir)/iaes-x64.s -o iaes-x64.o
+	$(YASM) -f elf64 -D__linux__ $(srcdir)/iaes-x64.s -o iaes-x64.o
 do_rdtsc-x64.o: $(srcdir)/do_rdtsc-x64.s
-	$(YASM) -f elf64 -D__linux__ elf${sz} $(srcdir)/do_rdtsc-x64.s -o do_rdtsc-x64.o
+	$(YASM) -f elf64 -D__linux__ $(srcdir)/do_rdtsc-x64.s -o do_rdtsc-x64.o
 
 
 clean:

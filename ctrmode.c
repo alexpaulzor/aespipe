@@ -135,22 +135,25 @@ void enqueue_data(UCHAR * input, int size)
     //pad remainder with eof = 0x040a
     if (size % BLOCKSIZE != 0)
     {
-        for (int i = size % BLOCKSIZE; i < BLOCKSIZE; i += 2)
+        int i;
+        for (i = size % BLOCKSIZE; i < BLOCKSIZE; i += 2)
         {
             task -> inputtext[i] = 0x04;
             task -> inputtext[i + 1] = 0x0a;
         }
     }
 
-    memcpy(task -> iv, next_blockid_msb, sizeof(unsigned long));
-    memcpy(&(task -> iv[sizeof(unsigned long)]), next_blockid_lsb, sizeof(unsigned long));
+    task -> taskid = next_taskid++;
+
+    memcpy(task -> iv, &next_blockid_msb, sizeof(unsigned long));
+    memcpy(&(task -> iv[sizeof(unsigned long)]), &next_blockid_lsb, sizeof(unsigned long));
     next_blockid_lsb += task -> blocks;
     if (next_blockid_lsb < task -> blocks) next_blockid_msb++;      // increment more significant bit.
     task -> complete = 0;
     task -> next_task = NULL;
     task -> next_block = NULL;
 
-    add_task(&(crypters[task -> blockid % numthreads]), task);
+    add_task(&(crypters[task -> taskid % numthreads]), task);
 }
 
 void ctr_finish()
@@ -165,7 +168,8 @@ void ctr_setup(int num_threads, void * key_in, int key_length, char * password_s
     numthreads = num_threads;
 
     nonce = malloc(BLOCKSIZE);
-    for (int i = 0; i < BLOCKSIZE; i++)
+    int i;
+    for (i = 0; i < BLOCKSIZE; i++)
     {
         if (password_seed && strlen(password_seed) > i)
         {
@@ -183,10 +187,11 @@ void ctr_setup(int num_threads, void * key_in, int key_length, char * password_s
 
     next_blockid_lsb = 0;
     next_blockid_msb = 0;
+    next_taskid = 0;
 
     crypters = malloc(sizeof(crypter_t) * numthreads);;
 
-    for (int i = 0; i < numthreads; i++)
+    for (i = 0; i < numthreads; i++)
     {
         pthread_mutex_init(&(crypters[i].mutex), NULL);
         crypters[i].current_task = NULL;

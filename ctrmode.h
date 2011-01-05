@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "iaesni.h"
+#include "ctrmode_ext.h"
 
 #define POLL_INTERVAL 100
 #define BLOCKSIZE 16        //given in intel AES library
@@ -39,6 +40,7 @@ typedef struct crypttask
     UCHAR * inputtext;
     UCHAR * outputtext;
     UCHAR iv[BLOCKSIZE];
+    int taskid;
     int complete;
     struct crypttask * next_task;       //next task for worker thread
     struct crypttask * next_block;      //next block sequentially
@@ -61,9 +63,6 @@ UCHAR * key;
 int keysize;
 unsigned long next_blockid_lsb;
 unsigned long next_blockid_msb;
-
-extern void ctr_setup(int, void *, int, char *);
-extern void ctr_finish();
-extern void enqueue_data(UCHAR *, int);
+int next_taskid;
 
 #endif  //CTRMODE_H
