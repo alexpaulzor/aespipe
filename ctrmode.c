@@ -70,7 +70,23 @@ void * crypt_worker(void * voided_param)
 
 void output_task(crypttask_t * task)
 {
-    fwrite(task -> outputtext, 1, task -> blocks * BLOCKSIZE, stdout);
+    int length = task -> blocks * BLOCKSIZE;
+    if (task -> next_block == NULL)
+    {
+        //this is the last block--check and strip padding
+        int num_padded = task -> outputtext[task -> blocks * BLOCKSIZE - 1];
+        if (0 < num_padded && num_padded < BLOCKSIZE)
+        {
+            int i;
+            //check that all of the last num_padded bytes are the same (i.e. equal to num_padded)
+            for (i = 0; i < num_padded; i++)
+            {
+                if (task -> outputtext[length - i - 1] != num_padded) break;
+            }
+            if (i == num_padded) length -= num_padded;
+        }
+    }
+    fwrite(task -> outputtext, 1, length, stdout);
 }
 
 void * output_worker(void * voided_param)
@@ -134,17 +150,16 @@ void enqueue_data(UCHAR * input, int size)
 {
     //TODO: use compute_sector_iv in aespipe.c to compute the iv.
     crypttask_t * task = malloc(sizeof(crypttask_t));
-    task -> inputtext = malloc(size);
-    memcpy(task -> inputtext, input, size);
     task -> blocks = (size + BLOCKSIZE - 1) / BLOCKSIZE;   //round up
-    //pad remainder with eof = 0x040a
+    task -> inputtext = malloc(task -> blocks * BLOCKSIZE);
+    memcpy(task -> inputtext, input, size);
+    //pad remainder with the number of bytes that are padding.
     if (size % BLOCKSIZE != 0)
     {
         int i;
-        for (i = size % BLOCKSIZE; i < BLOCKSIZE; i += 2)
+        for (i = size % BLOCKSIZE; i < BLOCKSIZE; i++)
         {
-            task -> inputtext[i] = 0x04;
-            task -> inputtext[i + 1] = 0x0a;
+            task -> inputtext[i] = size % BLOCKSIZE;
         }
     }
 
