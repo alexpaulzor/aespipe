@@ -38,6 +38,7 @@ void perform_task(crypttask_t * task)
             break;
         default:
             fprintf(stderr, "Invalid keysize: %d\n", keysize);
+            exit(1);
             break;
     }
 
@@ -63,30 +64,12 @@ void * crypt_worker(void * voided_param)
         }
     }
 
-    fprintf(stderr, "Crypt worker thread finished.\n");
-
     return NULL;
 }
 
 void output_task(crypttask_t * task)
 {
-    int length = task -> blocks * BLOCKSIZE;
-    if (task -> next_block == NULL)
-    {
-        //this is the last block--check and strip padding
-        int num_padded = task -> outputtext[task -> blocks * BLOCKSIZE - 1];
-        if (0 < num_padded && num_padded < BLOCKSIZE)
-        {
-            int i;
-            //check that all of the last num_padded bytes are the same (i.e. equal to num_padded)
-            for (i = 0; i < num_padded; i++)
-            {
-                if (task -> outputtext[length - i - 1] != num_padded) break;
-            }
-            if (i == num_padded) length -= num_padded;
-        }
-    }
-    fwrite(task -> outputtext, 1, length, stdout);
+    fwrite(task -> outputtext, 1, task -> blocks * BLOCKSIZE, stdout);
 }
 
 void * output_worker(void * voided_param)
@@ -111,14 +94,12 @@ void * output_worker(void * voided_param)
         }
     }
 
-    fprintf(stderr, "io_worker finished.\n");
-
     return NULL;
 }
         
 void add_task(crypter_t * crypter, crypttask_t * task)
 {
-   
+    //append the task to the end of the output list.
     pthread_mutex_lock(&(io_worker -> mutex));
     if (io_worker -> current_task == NULL)
     {
@@ -131,7 +112,8 @@ void add_task(crypter_t * crypter, crypttask_t * task)
         io_worker -> last_task = task;
     }
     pthread_mutex_unlock(&(io_worker -> mutex));
-    
+   
+    //append the task to the end of the worker's todo list.
     pthread_mutex_lock(&(crypter -> mutex));
     if (crypter -> current_task == NULL)
     {
@@ -148,27 +130,25 @@ void add_task(crypter_t * crypter, crypttask_t * task)
 
 void enqueue_data(UCHAR * input, int size)
 {
-    //TODO: use compute_sector_iv in aespipe.c to compute the iv.
     crypttask_t * task = malloc(sizeof(crypttask_t));
     task -> blocks = (size + BLOCKSIZE - 1) / BLOCKSIZE;   //round up
     task -> inputtext = malloc(task -> blocks * BLOCKSIZE);
     memcpy(task -> inputtext, input, size);
-    //pad remainder with the number of bytes that are padding.
-    if (size % BLOCKSIZE != 0)
-    {
-        int i;
-        for (i = size % BLOCKSIZE; i < BLOCKSIZE; i++)
-        {
-            task -> inputtext[i] = size % BLOCKSIZE;
-        }
-    }
 
     task -> taskid = next_taskid++;
 
-    memcpy(task -> iv, &next_blockid_msb, sizeof(unsigned long));
-    memcpy(&(task -> iv[sizeof(unsigned long)]), &next_blockid_lsb, sizeof(unsigned long));
+    //xor with nonce
+    unsigned long iv_part = *((unsigned long *)nonce);
+    iv_part ^= next_blockid_msb;
+    memcpy(task -> iv, &iv_part, sizeof(unsigned long));
+    iv_part = *((unsigned long *)(&(nonce[sizeof(unsigned long)])));
+    iv_part ^= next_blockid_lsb;
+    memcpy(&(task -> iv[sizeof(unsigned long)]), &iv_part, sizeof(unsigned long));
+
+    //increment counter
     next_blockid_lsb += task -> blocks;
-    if (next_blockid_lsb < task -> blocks) next_blockid_msb++;      // increment more significant bit.
+    if (next_blockid_lsb < task -> blocks) next_blockid_msb++;      // increment more significant counter if we overflowed.
+
     task -> complete = 0;
     task -> next_task = NULL;
     task -> next_block = NULL;
@@ -178,7 +158,7 @@ void enqueue_data(UCHAR * input, int size)
 
 void ctr_finish()
 {
-    has_more_input = FALSE;
+    has_more_input = 0;
     // wait for queued jobs to finish
     pthread_join(io_worker -> thread, NULL);
 }
@@ -187,20 +167,9 @@ void ctr_setup(int num_threads, void * key_in, int key_length, char * password_s
 {
     numthreads = num_threads;
 
+    //create the nonce and copy in as many bytes as exist
     nonce = malloc(BLOCKSIZE);
-    int i;
-    for (i = 0; i < BLOCKSIZE; i++)
-    {
-        if (password_seed && strlen(password_seed) > i)
-        {
-            nonce[i] = password_seed[i];
-        }
-        else
-        {
-            nonce[i] = 0;
-        }
-    }
-
+    memcpy(nonce, password_seed, strlen(password_seed) < BLOCKSIZE ? strlen(password_seed): BLOCKSIZE);
     keysize = key_length;
     key = malloc(keysize);
     memcpy(key, key_in, keysize);
@@ -209,8 +178,10 @@ void ctr_setup(int num_threads, void * key_in, int key_length, char * password_s
     next_blockid_msb = 0;
     next_taskid = 0;
 
-    crypters = malloc(sizeof(crypter_t) * numthreads);;
+    //create the worker threads
+    crypters = malloc(sizeof(crypter_t) * numthreads);
 
+    int i;
     for (i = 0; i < numthreads; i++)
     {
         pthread_mutex_init(&(crypters[i].mutex), NULL);
@@ -220,12 +191,12 @@ void ctr_setup(int num_threads, void * key_in, int key_length, char * password_s
         pthread_create(&(crypters[i].thread), NULL, crypt_worker, (void *)(&(crypters[i])));
     }
 
+    //create thread to output
     io_worker = malloc(sizeof(crypter_t));
     pthread_mutex_init(&(io_worker -> mutex), NULL);
     io_worker -> current_task = NULL;
     io_worker -> last_task = NULL;
 
-    fprintf(stderr, "Spawning io_worker thread.\n");
     pthread_create(&(io_worker -> thread), NULL, output_worker, (void *)(io_worker));
     
     has_more_input = 1;

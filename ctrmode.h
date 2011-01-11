@@ -26,13 +26,7 @@
 #include "ctrmode_ext.h"
 
 #define POLL_INTERVAL 100
-#define BLOCKSIZE 16        //given in intel AES library
-#ifndef TRUE
-# define TRUE 1
-#endif
-#ifndef FALSE
-# define FALSE 0
-#endif
+#define BLOCKSIZE 16
 
 typedef struct crypttask
 {

@@ -8,10 +8,12 @@ pseed=';lkj;lkj;lkj;lkj;lkj'
 
 passfile=$(mktemp)
 echo "$pass" > $passfile
-plaintext=$(mktemp)
-echo "Generating $testsize B file '$plaintext'"
-dd if=/dev/urandom of=$plaintext bs=1 count=$testsize
-echo "Done."
+plaintext="/tmp/testaespipe.$testsize"
+if [ ! -e "$plaintext" ]; then
+    echo "Generating $testsize B file '$plaintext'"
+    dd if=/dev/urandom of=$plaintext bs=1 count=$testsize
+    echo "Done."
+fi
 ciphertext=$(mktemp)
 echo "Encrypting '$plaintext' using $threads threads to '$ciphertext'"
 cat $plaintext | ./aespipe -e aes256 -H sha512 -m ctr -t $threads -P $passfile -S "$pseed" -v > $ciphertext
@@ -21,8 +23,10 @@ echo "Decrypting '$ciphertext' using $threads to '$plaintext2'"
 cat $ciphertext | ./aespipe -e aes256 -H sha512 -m ctr -t $threads -P $passfile -S "$pseed" -d -v > $plaintext2
 echo "Done"
 echo "Comparing plaintexts"
-md5sum $plaintext $plaintext2
-xxd $plaintext | head
-xxd $plaintext2 | head
-echo "Done"
+diffval=$(diff $plaintext $plaintext2)
+if [ -z "$diffval" ]; then
+    echo "PASS -- plaintexts are equivalent"
+else
+    echo "FAIL -- plaintexts differ"
+fi
 
