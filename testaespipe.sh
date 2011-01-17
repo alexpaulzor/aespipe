@@ -1,6 +1,6 @@
 #!/bin/bash
 
-testsize='10485760'       #10 MB
+testsize='10485766'       #10 MB + 6B
 #testsize='104857600'       #100 MB
 threads='8'
 pass='asdfasdfasdfasdfasdfasdf'

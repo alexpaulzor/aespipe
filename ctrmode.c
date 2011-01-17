@@ -23,8 +23,7 @@ void perform_task(crypttask_t * task)
 {
     task -> outputtext = malloc(BLOCKSIZE * task -> blocks);
     switch (keysize)
-    {
-        case 16:
+    { case 16:
         case 128:
             intel_AES_encdec128_CTR(task -> inputtext, task -> outputtext, key, task -> blocks, task -> iv);
             break;
@@ -69,7 +68,24 @@ void * crypt_worker(void * voided_param)
 
 void output_task(crypttask_t * task)
 {
-    fwrite(task -> outputtext, 1, task -> blocks * BLOCKSIZE, stdout);
+    int length = task -> blocks * BLOCKSIZE;
+    //This is where output padding needs to happen.
+    if (!has_more_input && task -> next_block == NULL)
+    {
+        //this is the last block, check for padding.
+        int padsize = task -> outputtext[length - 1];
+        if (padsize >= BLOCKSIZE) padsize = 0;
+        int i = 0;
+        while (i < padsize && task -> outputtext[length - 1 - i] == padsize) i++;
+        if (i > 0 && i == padsize)
+        {
+            //the last padsize bytes were equal to padsize, so we don't output them.
+            length -= padsize;
+            if (verbose) fprintf(stderr, "Truncating %d bytes of padding.\n", padsize);
+        }
+    }
+
+    fwrite(task -> outputtext, 1, length, stdout);
 }
 
 void * output_worker(void * voided_param)
@@ -134,6 +150,16 @@ void enqueue_data(UCHAR * input, int size)
     task -> blocks = (size + BLOCKSIZE - 1) / BLOCKSIZE;   //round up
     task -> inputtext = malloc(task -> blocks * BLOCKSIZE);
     memcpy(task -> inputtext, input, size);
+
+    //pad input text with the number of bytes that are padding.
+    //i.e. if the last block has 10 bytes in it, there are 6 bytes of padding,
+    //so the plaintext will end with 0x06 0x06 0x06 0x06 0x06 0x06.
+    int padsize = task -> blocks * BLOCKSIZE - size;
+    if (padsize > 0)
+    {
+        if (verbose) fprintf(stderr, "Padding inputtext with %d bytes.\n", padsize);
+        memset(&(task -> inputtext[size]), padsize, padsize);
+    }
 
     task -> taskid = next_taskid++;
 
