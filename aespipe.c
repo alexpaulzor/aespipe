@@ -1572,7 +1572,7 @@ int main(int argc, char **argv)
                         bits, encrypt ? "encrypting" : "decrypting", mode);
     }
 
-    bMask = multiKeyMode ? 511 : 15;
+    bMask = multiKeyMode ? 511 : 63;
 #if defined(SUPPORT_CTRMODE)
     if (encMode == CTR_MODE) ctr_setup(numThreads, ctx -> aes_e_key, ctx -> aes_Nkey * sizeof(u_int32_t), passSeedString);
 #endif

@@ -73,15 +73,15 @@ void output_task(crypttask_t * task)
     if (!has_more_input && task -> next_block == NULL)
     {
         //this is the last block, check for padding.
-        int padsize = task -> outputtext[length - 1];
-        if (padsize >= BLOCKSIZE) padsize = 0;
-        int i = 0;
-        while (i < padsize && task -> outputtext[length - 1 - i] == padsize) i++;
-        if (i > 0 && i == padsize)
+        int padsize = 0;
+        while (task -> outputtext[length - 1 - padsize] == 0)
+        {
+            padsize++;
+        }
+        if (padsize > 0)
         {
             //the last padsize bytes were equal to padsize, so we don't output them.
             length -= padsize;
-            if (verbose) fprintf(stderr, "Truncating %d bytes of padding.\n", padsize);
         }
     }
 
@@ -151,16 +151,6 @@ void enqueue_data(UCHAR * input, int size)
     task -> inputtext = malloc(task -> blocks * BLOCKSIZE);
     memcpy(task -> inputtext, input, size);
 
-    //pad input text with the number of bytes that are padding.
-    //i.e. if the last block has 10 bytes in it, there are 6 bytes of padding,
-    //so the plaintext will end with 0x06 0x06 0x06 0x06 0x06 0x06.
-    int padsize = task -> blocks * BLOCKSIZE - size;
-    if (padsize > 0)
-    {
-        if (verbose) fprintf(stderr, "Padding inputtext with %d bytes.\n", padsize);
-        memset(&(task -> inputtext[size]), padsize, padsize);
-    }
-
     task -> taskid = next_taskid++;
 
     //xor with nonce
@@ -213,9 +203,6 @@ void ctr_setup(int num_threads, void * key_in, int key_length, char * password_s
         pthread_mutex_init(&(crypters[i].mutex), NULL);
         crypters[i].current_task = NULL;
         crypters[i].last_task = NULL;
-        if (verbose) { 
-          fprintf(stderr, "Spawning crypt worker thread #%d\n", i);
-        }
         pthread_create(&(crypters[i].thread), NULL, crypt_worker, (void *)(&(crypters[i])));
     }
 
