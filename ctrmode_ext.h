@@ -20,5 +20,6 @@
 extern void ctr_setup(int, void *, int, char *);
 extern void ctr_finish();
 extern void enqueue_data(unsigned char *, int);
+extern int verbose;
 
 #endif  //CTRMODE_EXT_H

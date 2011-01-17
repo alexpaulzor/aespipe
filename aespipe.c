@@ -1152,7 +1152,7 @@ static void intelaes_ctr_singlekey_encrypt(int size)
 static void intelaes_ctr_multikey_decrypt(int size)
 {
     //TODO: implement
-    fprintf(stderr, "Counter mode multikey encryption is not supported");
+    fprintf(stderr, "Counter mode multikey decryption is not supported");
     exit(1);
 }
 

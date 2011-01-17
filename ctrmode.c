@@ -187,7 +187,9 @@ void ctr_setup(int num_threads, void * key_in, int key_length, char * password_s
         pthread_mutex_init(&(crypters[i].mutex), NULL);
         crypters[i].current_task = NULL;
         crypters[i].last_task = NULL;
-        fprintf(stderr, "Spawning crypt worker thread #%d\n", i);
+        if (verbose) { 
+          fprintf(stderr, "Spawning crypt worker thread #%d\n", i);
+        }
         pthread_create(&(crypters[i].thread), NULL, crypt_worker, (void *)(&(crypters[i])));
     }
 
