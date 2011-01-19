@@ -31,8 +31,7 @@
 typedef struct crypttask
 {
     size_t blocks;
-    UCHAR * inputtext;
-    UCHAR * outputtext;
+    UCHAR * text;
     UCHAR iv[BLOCKSIZE];
     int taskid;
     int complete;

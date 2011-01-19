@@ -21,19 +21,19 @@
  */
 void perform_task(crypttask_t * task)
 {
-    task -> outputtext = malloc(BLOCKSIZE * task -> blocks);
+    UCHAR outputtext[BLOCKSIZE * task -> blocks];
     switch (keysize)
     { case 16:
         case 128:
-            intel_AES_encdec128_CTR(task -> inputtext, task -> outputtext, key, task -> blocks, task -> iv);
+            intel_AES_encdec128_CTR(task -> text, outputtext, key, task -> blocks, task -> iv);
             break;
         case 24:
         case 192:
-            intel_AES_encdec192_CTR(task -> inputtext, task -> outputtext, key, task -> blocks, task -> iv);
+            intel_AES_encdec192_CTR(task -> text, outputtext, key, task -> blocks, task -> iv);
             break;
         case 32:
         case 256:
-            intel_AES_encdec256_CTR(task -> inputtext, task -> outputtext, key, task -> blocks, task -> iv);
+            intel_AES_encdec256_CTR(task -> text, outputtext, key, task -> blocks, task -> iv);
             break;
         default:
             fprintf(stderr, "Invalid keysize: %d\n", keysize);
@@ -41,6 +41,7 @@ void perform_task(crypttask_t * task)
             break;
     }
 
+    memcpy(task -> text, outputtext, BLOCKSIZE * task -> blocks);
     task -> complete = 1;
 }
 
@@ -75,7 +76,7 @@ void output_task(crypttask_t * task)
     {
         //this is the last block, check for padding.
         int padsize = 0;
-        while (task -> outputtext[length - 1 - padsize] == 0)
+        while (task -> text[length - 1 - padsize] == 0)
         {
             padsize++;
         }
@@ -86,7 +87,7 @@ void output_task(crypttask_t * task)
         }
     }
 
-    fwrite(task -> outputtext, 1, length, stdout);
+    fwrite(task -> text, 1, length, stdout);
 }
 
 void * output_worker(void * voided_param)
@@ -106,8 +107,7 @@ void * output_worker(void * voided_param)
             io_worker -> num_tasks--;
             pthread_mutex_unlock(&(io_worker -> mutex));
 
-            free(oldtask -> inputtext);
-            free(oldtask -> outputtext);
+            free(oldtask -> text);
             free(oldtask);
         }
     }
@@ -159,9 +159,9 @@ void enqueue_data(UCHAR * input, int size)
     }
 
     crypttask_t * task = malloc(sizeof(crypttask_t));
-    task -> blocks = (size + BLOCKSIZE - 1) / BLOCKSIZE;   //round up
-    task -> inputtext = malloc(task -> blocks * BLOCKSIZE);
-    memcpy(task -> inputtext, input, size);
+    task -> blocks = (size + BLOCKSIZE - 1) / BLOCKSIZE;   //round up, although size should ALWAYS be an even multiple of BLOCKSIZE
+    task -> text = malloc(task -> blocks * BLOCKSIZE);
+    memcpy(task -> text, input, size);
 
     task -> taskid = next_taskid++;
 
