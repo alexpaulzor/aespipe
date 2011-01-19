@@ -25,8 +25,8 @@
 #include "iaesni.h"
 #include "ctrmode_ext.h"
 
-#define POLL_INTERVAL 100
 #define BLOCKSIZE 16
+#define MAX_OUTPUT_TASKS 1024       //arbitrary
 
 typedef struct crypttask
 {
@@ -46,6 +46,7 @@ typedef struct crypter
     pthread_mutex_t mutex;
     struct crypttask * current_task;
     struct crypttask * last_task;       //optimization
+    int num_tasks;
 } crypter_t;
 
 int numthreads = 0;

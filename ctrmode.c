@@ -53,12 +53,13 @@ void * crypt_worker(void * voided_param)
 
     while (has_more_input || crypter -> current_task != NULL)
     {
-        if (crypter -> current_task == NULL) usleep(POLL_INTERVAL);
+        if (crypter -> current_task == NULL) sched_yield();
         else
         {
             perform_task(crypter -> current_task);
             pthread_mutex_lock(&(crypter -> mutex));
             crypter -> current_task = crypter -> current_task -> next_task;
+            crypter -> num_tasks--;
             pthread_mutex_unlock(&(crypter -> mutex));
         }
     }
@@ -94,7 +95,7 @@ void * output_worker(void * voided_param)
 
     while (has_more_input || io_worker -> current_task != NULL)
     {
-        if (io_worker -> current_task == NULL || !(io_worker -> current_task -> complete)) usleep(POLL_INTERVAL);
+        if (io_worker -> current_task == NULL || !(io_worker -> current_task -> complete)) sched_yield();
         else
         {
             output_task(io_worker -> current_task);
@@ -102,6 +103,7 @@ void * output_worker(void * voided_param)
             pthread_mutex_lock(&(io_worker -> mutex));
             crypttask_t * oldtask = io_worker -> current_task;
             io_worker -> current_task = io_worker -> current_task -> next_block;
+            io_worker -> num_tasks--;
             pthread_mutex_unlock(&(io_worker -> mutex));
 
             free(oldtask -> inputtext);
@@ -121,11 +123,13 @@ void add_task(crypter_t * crypter, crypttask_t * task)
     {
         io_worker -> current_task = task;
         io_worker -> last_task = task;
+        io_worker -> num_tasks = 1;
     }
     else
     {
         io_worker -> last_task -> next_block = task;
         io_worker -> last_task = task;
+        io_worker -> num_tasks++;
     }
     pthread_mutex_unlock(&(io_worker -> mutex));
    
@@ -135,17 +139,25 @@ void add_task(crypter_t * crypter, crypttask_t * task)
     {
         crypter -> current_task = task;
         crypter -> last_task = task;
+        crypter -> num_tasks = 1;
     }
     else
     {
         crypter -> last_task -> next_task = task;
         crypter -> last_task = task;
+        crypter -> num_tasks++;
     }
     pthread_mutex_unlock(&(crypter -> mutex));
 }
 
 void enqueue_data(UCHAR * input, int size)
 {
+    while (io_worker -> num_tasks > MAX_OUTPUT_TASKS)
+    {
+        // block to keep the output queue reasonably short.
+        sched_yield();
+    }
+
     crypttask_t * task = malloc(sizeof(crypttask_t));
     task -> blocks = (size + BLOCKSIZE - 1) / BLOCKSIZE;   //round up
     task -> inputtext = malloc(task -> blocks * BLOCKSIZE);
@@ -203,6 +215,7 @@ void ctr_setup(int num_threads, void * key_in, int key_length, char * password_s
         pthread_mutex_init(&(crypters[i].mutex), NULL);
         crypters[i].current_task = NULL;
         crypters[i].last_task = NULL;
+        crypters[i].num_tasks = 0;
         pthread_create(&(crypters[i].thread), NULL, crypt_worker, (void *)(&(crypters[i])));
     }
 
@@ -211,6 +224,7 @@ void ctr_setup(int num_threads, void * key_in, int key_length, char * password_s
     pthread_mutex_init(&(io_worker -> mutex), NULL);
     io_worker -> current_task = NULL;
     io_worker -> last_task = NULL;
+    io_worker -> num_tasks = 0;
 
     pthread_create(&(io_worker -> thread), NULL, output_worker, (void *)(io_worker));
     
