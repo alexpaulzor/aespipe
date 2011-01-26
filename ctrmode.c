@@ -58,7 +58,7 @@ void * crypt_worker(void * voided_param)
         {
             perform_task(crypter -> current_task);
             if (pthread_mutex_lock(&(crypter -> mutex))) perror("crypter lock failed in crypt_worker");
-            crypttask_t old_task = crypter -> current_task;
+            crypttask_t * old_task = crypter -> current_task;
             crypter -> current_task = crypter -> current_task -> next_task;
             crypter -> num_tasks--;
             pthread_mutex_unlock(&(crypter -> mutex));
