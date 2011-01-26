@@ -42,7 +42,6 @@ void perform_task(crypttask_t * task)
     }
 
     memcpy(task -> text, outputtext, BLOCKSIZE * task -> blocks);
-    task -> complete = 1;
 }
 
 /*
@@ -58,10 +57,12 @@ void * crypt_worker(void * voided_param)
         else
         {
             perform_task(crypter -> current_task);
-            pthread_mutex_lock(&(crypter -> mutex));
+            if (pthread_mutex_lock(&(crypter -> mutex))) perror("crypter lock failed in crypt_worker");
+            crypttask_t old_task = crypter -> current_task;
             crypter -> current_task = crypter -> current_task -> next_task;
             crypter -> num_tasks--;
             pthread_mutex_unlock(&(crypter -> mutex));
+            old_task -> complete = 1;
         }
     }
 
@@ -82,7 +83,7 @@ void output_task(crypttask_t * task)
         }
         if (padsize > 0)
         {
-            //the last padsize bytes were equal to padsize, so we don't output them.
+            //the last padsize bytes were zeros, so we don't output them.
             length -= padsize;
         }
     }
@@ -101,7 +102,7 @@ void * output_worker(void * voided_param)
         {
             output_task(io_worker -> current_task);
 
-            pthread_mutex_lock(&(io_worker -> mutex));
+            if (pthread_mutex_lock(&(io_worker -> mutex))) perror("io_worker lock failed in output_worker");
             crypttask_t * oldtask = io_worker -> current_task;
             io_worker -> current_task = io_worker -> current_task -> next_block;
             io_worker -> num_tasks--;
@@ -118,7 +119,7 @@ void * output_worker(void * voided_param)
 void add_task(crypter_t * crypter, crypttask_t * task)
 {
     //append the task to the end of the output list.
-    pthread_mutex_lock(&(io_worker -> mutex));
+    if (pthread_mutex_lock(&(io_worker -> mutex))) perror("io_worker lock failed in add_task");
     if (io_worker -> current_task == NULL)
     {
         io_worker -> current_task = task;
@@ -134,7 +135,7 @@ void add_task(crypter_t * crypter, crypttask_t * task)
     pthread_mutex_unlock(&(io_worker -> mutex));
    
     //append the task to the end of the worker's todo list.
-    pthread_mutex_lock(&(crypter -> mutex));
+    if (pthread_mutex_lock(&(crypter -> mutex))) perror("crypter lock failed in add_task");
     if (crypter -> current_task == NULL)
     {
         crypter -> current_task = task;
@@ -162,6 +163,10 @@ void enqueue_data(UCHAR * input, int size)
     task -> blocks = (size + BLOCKSIZE - 1) / BLOCKSIZE;   //round up, although size should ALWAYS be an even multiple of BLOCKSIZE
     task -> text = malloc(task -> blocks * BLOCKSIZE);
     memcpy(task -> text, input, size);
+    if (size != task -> blocks * BLOCKSIZE)
+    {
+        memset(&(task -> text[size]), 0x0, task -> blocks * BLOCKSIZE - size);
+    }
 
     task -> taskid = next_taskid++;
 
@@ -188,7 +193,16 @@ void ctr_finish()
 {
     has_more_input = 0;
     // wait for queued jobs to finish
+    int i;
+    for (i = 0; i < numthreads; i++)
+    {
+        pthread_join(crypters[i].thread, NULL);
+    }
     pthread_join(io_worker -> thread, NULL);
+    //clean up
+    memset(nonce, 0x0, BLOCKSIZE);
+    free(crypters);
+    free(io_worker);
 }
 
 void ctr_setup(int num_threads, void * key_in, int key_length, char * password_seed)
